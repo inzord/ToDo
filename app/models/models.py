@@ -2,7 +2,7 @@ from datetime import date
 from sqlalchemy import Integer, String, Date
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.dependencies import Base
+from app.core.database import Base
 
 
 class TaskModel(Base):

@@ -1,34 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db
+from app.core.database import get_session
 from app.crude import crude
-from app.shemas.schemas import Task, TaskCreate, TaskUpdate
+from app.shemas.schemas import TaskCreate, Task, TaskUpdate
 
-router = APIRouter()
-
-
-@router.post("/tasks/create", response_model=Task)
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    return crude.create_task(db=db, task=task)
+router = APIRouter(prefix="/tasks")
 
 
-@router.get("/tasks/{task_id}", response_model=Task)
-def read_task(task_id: int, db: Session = Depends(get_db)):
-    db_task = crude.get_task(db=db, task_id=task_id)
+@router.post("/create", response_model=Task)
+async def create_task(task: TaskCreate, db: AsyncSession = Depends(get_session)):
+    return await crude.create_task(db=db, task=task)
+
+
+@router.get("/list", response_model=list[Task])
+async def list_tasks(db: AsyncSession = Depends(get_session), skip: int = 0, limit: int = 10):
+    return await crude.get_tasks(db=db, skip=skip, limit=limit)
+
+
+@router.get("/{task_id}", response_model=Task)
+async def read_task(task_id: int, db: AsyncSession = Depends(get_session)):
+    db_task = await crude.get_task(db=db, task_id=task_id)
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return db_task
 
 
-@router.patch("/tasks/{task_id}/update", response_model=Task)
-def update_task(task_id: int, task: TaskUpdate, db: Session = Depends(get_db)):
-    db_task = crude.update_task(db=db, task_id=task_id, task=task)
+@router.patch("/{task_id}/update", response_model=Task)
+async def update_task(task_id: int, task: TaskUpdate, db: AsyncSession = Depends(get_session)):
+    db_task = await crude.update_task(db=db, task_id=task_id, task=task)
     if db_task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return db_task
-
-
-@router.get("/tasks", response_model=list[Task])
-def list_tasks(db: Session = Depends(get_db), skip: int = 0, limit: int = 10):
-    return crude.get_tasks(db=db, skip=skip, limit=limit)
